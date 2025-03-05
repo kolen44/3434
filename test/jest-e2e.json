@@ -1,0 +1,17 @@
+{
+  "moduleFileExtensions": [
+    "js",
+    "json",
+    "ts"
+  ],
+  "rootDir": ".",
+  "testEnvironment": "node",
+  "testRegex": ".e2e-spec.ts$",
+  "transform": {
+    "^.+\\.(t|j)s$": "ts-jest"
+  },
+  "moduleNameMapper": {
+    "@model_generation/model_generation/(.*)": "<rootDir>/../libs/model_generation/src/$1",
+    "@model_generation/model_generation": "<rootDir>/../libs/model_generation/src"
+  }
+}

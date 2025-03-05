@@ -1,0 +1,20 @@
+{
+  "$schema": "https://json.schemastore.org/nest-cli",
+  "collection": "@nestjs/schematics",
+  "sourceRoot": "src",
+  "compilerOptions": {
+    "deleteOutDir": true,
+    "webpack": true
+  },
+  "projects": {
+    "model_generation": {
+      "type": "library",
+      "root": "libs/model_generation",
+      "entryFile": "index",
+      "sourceRoot": "libs/model_generation/src",
+      "compilerOptions": {
+        "tsConfigPath": "libs/model_generation/tsconfig.lib.json"
+      }
+    }
+  }
+}
