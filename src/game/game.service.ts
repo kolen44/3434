@@ -152,12 +152,20 @@ export class GameService {
     return newEnemy;
   }
 
-  async startGame(uuid: string) {
+  async startGame(
+    uuid: string,
+    numberOfCharacters: number = 1,
+    numberOfLocations: number = 1,
+  ) {
     const currentGame = await this.findGame(uuid);
     if (currentGame) return currentGame;
     await this.createHero(uuid);
     const hero = await this.takeCurrentHero(uuid);
-    const game = await this.modelService.createPlaceFromTG(uuid);
+    const game = await this.modelService.createPlaceFromTG(
+      uuid,
+      numberOfCharacters,
+      numberOfLocations,
+    );
     if (game && 'locations' in game) {
       hero.location = await this.locationService.findById(game.locations[0].id);
       game.locations[0].npcs.push(hero);
@@ -166,7 +174,7 @@ export class GameService {
     }
   }
 
-  async hitLogic(uuid: string) {
+  async hitLogic(uuid: string, enemyId?: number) {
     const currentGame = await this.findGame(uuid);
 
     if (
@@ -174,10 +182,17 @@ export class GameService {
       !currentGame.locations ||
       currentGame.locations.length === 0
     ) {
-      throw new NotFoundException('Игра или локация не найдены');
+      throw new NotFoundException('Игра или локации не найдены');
     }
 
-    const currentLocation = currentGame.locations[0];
+    const currentLocation = currentGame.locations.find((location) =>
+      location.npcs.some((npc) => npc.type === 'hero' && npc.current),
+    );
+
+    if (!currentLocation) {
+      throw new NotFoundException('Герой не найден ни в одной локации');
+    }
+
     const hero = currentLocation.npcs.find(
       (npc) => npc.type === 'hero' && npc.current,
     );
@@ -189,58 +204,52 @@ export class GameService {
     const enemies = currentLocation.npcs.filter((npc) => npc.type === 'enemy');
 
     if (enemies.length === 0) {
-      throw new NotFoundException(
-        'Враги не найдены в текущей локации, но вы можете изменить локацию .',
-      );
+      throw new NotFoundException('Враги не найдены в текущей локации.');
     }
 
     let finalText = '';
 
-    // Урон от героя к каждому врагу на локации
-    enemies.forEach((enemy) => {
+    let targetEnemies = enemies;
+    if (enemyId !== -1) {
+      targetEnemies = enemies.filter((enemy) => enemy.id === enemyId);
+      if (targetEnemies.length === 0) {
+        throw new NotFoundException(
+          'Выбранный враг не найден в текущей локации.',
+        );
+      }
+    }
+
+    // Герой атакует выбранного врага (или всех если враг не указан)
+    targetEnemies.forEach((enemy) => {
       if (enemy.mechanic && hero.mechanic) {
         enemy.mechanic.hp -= hero.mechanic.damage;
+        if (enemy.mechanic.hp < 0) enemy.mechanic.hp = 0;
 
-        if (enemy.mechanic.hp < 0) {
-          enemy.mechanic.hp = 0;
-        }
-
-        finalText +=
-          `Вы нанесли врагу ${enemy.name} урон: ${hero.mechanic.damage}. ` +
-          `У врага осталось здоровья: ${enemy.mechanic.hp}\n`;
+        finalText += `Вы нанесли врагу ${enemy.name} урон: ${hero.mechanic.damage}. `;
+        finalText += `У врага осталось здоровья: ${enemy.mechanic.hp}\n`;
       }
     });
 
-    // Ответный урон от врагов герою
-    enemies.forEach((enemy) => {
+    targetEnemies.forEach((enemy) => {
       if (enemy.mechanic && hero.mechanic && enemy.mechanic.hp > 0) {
         hero.mechanic.hp -= enemy.mechanic.damage;
+        if (hero.mechanic.hp < 0) hero.mechanic.hp = 0;
 
-        if (hero.mechanic.hp < 0) {
-          hero.mechanic.hp = 0;
-        }
-
-        finalText +=
-          `Враг ${enemy.name} нанес вам урон: ${enemy.mechanic.damage}. ` +
-          `У вас осталось здоровья: ${hero.mechanic.hp}\n`;
+        finalText += `Враг ${enemy.name} нанес вам урон: ${enemy.mechanic.damage}. `;
+        finalText += `У вас осталось здоровья: ${hero.mechanic.hp}\n`;
       }
     });
 
-    // Проверка на смерть героя
     if (hero.mechanic.hp <= 0) {
       finalText += 'Вы погибли! Игра окончена.\n';
     }
 
-    // Проверка на победу (все враги мертвы)
-    const allEnemiesDead = enemies.every((enemy) => enemy.mechanic.hp <= 0);
-    if (allEnemiesDead) {
+    if (enemies.every((enemy) => enemy.mechanic.hp <= 0)) {
       finalText +=
-        'Все враги на локации побеждены! Поздравляем!\n Желаете изменить локацию ?';
+        'Все враги в локации побеждены! Поздравляем!\n Желаете изменить локацию?';
     }
 
-    // Сохраняем обновленное состояние игры
     await this.gameRepository.save(currentGame);
-
     return finalText;
   }
 

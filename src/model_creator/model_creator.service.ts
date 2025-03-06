@@ -109,19 +109,26 @@ export class ModelCreatorService {
     }
   }
 
-  async createPlaceFromTG(uuid: string) {
+  async createPlaceFromTG(
+    uuid: string,
+    numberOfCharacters: number = 1,
+    countOfLocations: number = 1,
+  ) {
     const game = await this.createGame(uuid);
-    const gamePlace = await this.createNewGamePlace(1);
+    for (let i = 0; i <= countOfLocations; i++) {
+      const gamePlace = await this.createNewGamePlace(numberOfCharacters);
 
-    if (gamePlace && 'location' in gamePlace) {
-      game.locations.push(gamePlace.location);
+      if (gamePlace && 'location' in gamePlace) {
+        game.locations.push(gamePlace.location);
 
-      return await this.updateGameForRelations(game);
-    } else {
-      return new BadGatewayException(
-        'Ответ от AI не был получен в функции createPlaceFromTG',
-      );
+        await this.updateGameForRelations(game);
+      } else {
+        return new BadGatewayException(
+          'Ответ от AI не был получен в функции createPlaceFromTG',
+        );
+      }
     }
+    return await this.updateGameForRelations(game);
   }
 
   async deletePlaceFromTg() {}
