@@ -4,7 +4,7 @@ import { GameService } from './game.service';
 @Controller('game')
 export class GameController {
   constructor(private readonly gameService: GameService) {}
-  @Get('/change/:uuid/:numberLocation?')
+  @Get('/change/:uuid/:numberLocation')
   async changeLocation(
     @Param('uuid') uuid: string,
     @Param('numberLocation') numberLocation?: string,
