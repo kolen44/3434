@@ -40,7 +40,7 @@ export class ModelCreatorService {
     private readonly mechanicRepository: Repository<MechanicEntity>,
   ) {}
 
-  async createNewGamePlace(count: number = 1) {
+  async createNewGamePlace(count: number = 1, locationsData: string = '') {
     try {
       const locationData = await this.modelGenerationService.createLocation();
       const createdLocation = await this.locationsService.create(locationData);
@@ -95,7 +95,6 @@ export class ModelCreatorService {
         quests.push(await this.questsService.findById(createdQuest.id));
         npcs.push(await this.npcsService.findById(createdNpc.id));
         npcs.push(await this.npcsService.findById(createdEnemy.id));
-        console.log(await this.npcsService.findById(createdNpc.id));
       }
 
       const updatedLocation = await this.locationsService.findById(
@@ -115,7 +114,7 @@ export class ModelCreatorService {
     countOfLocations: number = 1,
   ) {
     const game = await this.createGame(uuid);
-    for (let i = 0; i <= countOfLocations; i++) {
+    for (let i = 0; i < countOfLocations; i++) {
       const gamePlace = await this.createNewGamePlace(numberOfCharacters);
 
       if (gamePlace && 'location' in gamePlace) {

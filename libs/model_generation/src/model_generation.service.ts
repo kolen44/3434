@@ -18,91 +18,96 @@ export class ModelGenerationService {
 
   constructor() {}
 
+  private async attemptRequest<T>(
+    fn: () => Promise<T>,
+    retries = 3,
+  ): Promise<T> {
+    let attempt = 0;
+    while (attempt < retries) {
+      try {
+        return await fn();
+      } catch (error) {
+        attempt++;
+        console.error(`Попытка ${attempt} не удалась:`, error);
+        if (attempt >= retries) {
+          throw new BadGatewayException(
+            `Ошибка после ${retries} попыток: ` + error,
+          );
+        }
+      }
+    }
+  }
+
   public async createLocation() {
-    try {
+    return this.attemptRequest(async () => {
       const chatCompletion = await this.client.chat.completions.create({
         messages: [
           {
             role: 'user',
-            content: createLoationPrompt + 'Левая сторона генерации',
+            content: createLoationPrompt + ' Левая сторона генерации',
           },
         ],
         model: 'gpt-4o',
       });
-
       return JSON.parse(chatCompletion.choices[0].message.content);
-    } catch (error) {
-      throw new BadGatewayException('Ошибка в функции createLocation ' + error);
-    }
+    });
   }
 
   public async createNpc(locationData = null, type: string = 'npc') {
-    try {
+    return this.attemptRequest(async () => {
       const chatCompletion = await this.client.chat.completions.create({
         messages: [
           {
             role: 'user',
             content:
               createNpcPrompt +
-              `Тип персонажа (они могут быть npc и врагами, на основании этого тебе нужно придумывать соответствующее описание и название персонажу) - ${type}. Данные о локации в которой находится персонаж: ${JSON.stringify(locationData)}`,
+              `Тип персонажа: ${type}. Данные о локации: ${JSON.stringify(locationData)}`,
           },
         ],
         model: 'gpt-4o',
       });
-
       return JSON.parse(chatCompletion.choices[0].message.content);
-    } catch (error) {
-      throw new BadGatewayException('Ошибка в функции createNpc ' + error);
-    }
+    });
   }
 
   public async createQuest(npcData: string) {
-    try {
+    return this.attemptRequest(async () => {
       const chatCompletion = await this.client.chat.completions.create({
         messages: [
           {
             role: 'user',
             content:
-              createQuestPrompt +
-              `Данные о npc персонаже к которому прикреплен квест: ${JSON.stringify(npcData)}`,
+              createQuestPrompt + ` Данные о NPC: ${JSON.stringify(npcData)}`,
           },
         ],
         model: 'gpt-4o',
       });
-
       return JSON.parse(chatCompletion.choices[0].message.content);
-    } catch (error) {
-      throw new BadGatewayException('Ошибка в функции createQuest ' + error);
-    }
+    });
   }
 
   public async createItem(npcData) {
-    try {
+    return this.attemptRequest(async () => {
       const chatCompletion = await this.client.chat.completions.create({
         messages: [
           {
             role: 'user',
             content:
-              createItemPrompt +
-              `Данные о npc персонаже к которому прикреплен данный item: ${JSON.stringify(npcData)}`,
+              createItemPrompt + ` Данные о NPC: ${JSON.stringify(npcData)}`,
           },
         ],
         model: 'gpt-4o',
       });
-
       return JSON.parse(chatCompletion.choices[0].message.content);
-    } catch (error) {
-      throw new BadGatewayException('Ошибка в функции createItem ' + error);
-    }
+    });
   }
 
   public async createMechanic(
     type: 'npc' | 'enemy' | 'hero',
     characterData?: Object,
   ) {
-    try {
+    return this.attemptRequest(async () => {
       let prompt: string;
-
       switch (type) {
         case 'npc':
           prompt = createMechanicNpcPrompt;
@@ -114,7 +119,7 @@ export class ModelGenerationService {
           prompt = createMechanicHeroPrompt;
           break;
         default:
-          throw new Error('Invalid mechanic type');
+          throw new Error('Некорректный тип механики');
       }
 
       const chatCompletion = await this.client.chat.completions.create({
@@ -122,16 +127,12 @@ export class ModelGenerationService {
           {
             role: 'user',
             content:
-              prompt +
-              ` Данные о ${type} персонаже для которого ты генерируешь механики , опирайся на эти данные что бы сгенерировать подходящие механики: ${JSON.stringify(characterData)}`,
+              prompt + ` Данные о ${type}: ${JSON.stringify(characterData)}`,
           },
         ],
         model: 'gpt-4o',
       });
-
       return JSON.parse(chatCompletion.choices[0].message.content);
-    } catch (error) {
-      throw new BadGatewayException('Ошибка в функции createMechanic ' + error);
-    }
+    });
   }
 }

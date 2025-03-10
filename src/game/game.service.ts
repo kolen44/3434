@@ -123,7 +123,6 @@ export class GameService {
   }
 
   async updateCharacterByLocation(updatedLocation) {
-    console.log(updatedLocation);
     const currentLocation = await this.locationService.findById(
       updatedLocation.id,
     );
